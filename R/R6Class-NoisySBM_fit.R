@@ -40,7 +40,7 @@ NoisySBM_fit <-
       #' @param dataMatrix square (noisy) matrix
       #' @param submodel character (\code{'Gauss'}, \code{'Gauss01'})
     #  #' @param directed logical, directed network or not. In not, \code{dataMatrix} must be symmetric.
-        initialize = function(dataMatrix, submodel, dimLabels= c(node='nodes')) {  #rajouter directed plus tard
+        initialize = function(dataMatrix, submodel, sbmSize=list(Qmin=1, Qmax=NULL, explor=1.5), filename=NULL ) {  #rajouter directed plus tard
 
         ## SANITY CHECKS (on data)
         stopifnot(is.matrix(dataMatrix))                   # must be a matrix
@@ -49,10 +49,10 @@ NoisySBM_fit <-
         stopifnot(isSymmetric(dataMatrix))    # symmetry and direction must agree
 
         ## INITIALIZE THE SBM OBJECT ACCORDING TO THE DATA
-        connectParam <- NA
+        connectParam <- list(mean=NA)
         signalParam <- NA
         noiseParam <- NA
-
+        dimLabels= c(node="nodeName")
         # connectParam <- switch(model,
         #   "bernoulli"  = list(mean = matrix(0, 0, 0)),
         #   "poisson"    = list(mean = matrix(0, 0, 0)),
@@ -65,13 +65,14 @@ NoisySBM_fit <-
           if (submodel %in% c('Exp','ExpGamma','Gamma'))
             model <- 'Gamma'
 
-        super$initialize(model        = model,
+        super$initialize(model        = 'bernoulli',
                          directed     = FALSE,
                          nbNodes      = nrow(dataMatrix),
                          blockProp    = vector("numeric", 0),
                          dimLabels    = dimLabels,
                          connectParam = connectParam,
-                         signalParam = signalParam,
+                         covarList    = list(),
+                        signalParam = signalParam,
                          noiseParam = noiseParam)
         private$Y <- dataMatrix
       },
@@ -125,6 +126,9 @@ NoisySBM_fit <-
 
         ## performing estimation
         private$BMobject$estimate()
+
+        private$NSBMobject <- fitNSBM(private$Y, model=submodel, sbmSize = sbmSize, filename = filename )
+
 
         ## Exporting blockmodels output to simpleSBM_fit fields
         private$import_from_BM()

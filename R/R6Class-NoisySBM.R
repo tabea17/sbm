@@ -8,15 +8,17 @@ NoisySBM <-
     inherit = SBM,
     public = list(
       #' @description constructor for SBM
-      #' @param model character describing the type of model  (gauss ou exp ou poisson)
+      #' @param modelFamily character describing the type of model  (gauss ou exp ou poisson)
       #' @param nbNodes number of nodes in the network
       #' @param directed logical, directed network or not.
       #' @param blockProp parameters for block proportions (vector of list of vectors)
       #' @param connectParam list of parameters for connectivity with a matrix of means 'mean' and an optional scalar for the variance 'var'. The size of mu must match \code{blockProp} length
-      #' @param noiseParam list of parameters for connectivity ...
+      #' @param covarParam optional vector of covariates effect
+      #' @param covarList optional list of covariates data
+      #'@param noiseParam list of parameters for connectivity ...
       #' @param signalParam list of parameters for connectivity ...
       #' @param dimLabels optional label for the node (default is "nodeName")   ?
-      initialize = function(model, nbNodes, directed=FALSE, blockProp, connectParam, noiseParam, signalParam, dimLabels=c(rep("nodes",2))) {
+      initialize = function(modelFamily, nbNodes, directed=FALSE, blockProp, connectParam, noiseParam, signalParam, dimLabels=c(node="nodeName"), covarParam=numeric(length(covarList)), covarList=list()) {
 
         ## SANITY CHECKS (on parameters)
      #   stopifnot(length(dimLabels) == 1)
@@ -33,7 +35,7 @@ NoisySBM <-
     #    )
 
         # if (!directed) stopifnot(isSymmetric(connectParam$mean)) # connectivity and direction must agree
-         super$initialize(model, directed, nbNodes, dimLabels, blockProp, connectParam, covarParam, covarList)
+         super$initialize(model='bernoulli', directed, nbNodes, dimLabels, blockProp, connectParam, covarParam, covarList)
       },
      #' #' @description a method to sample new block memberships for the current SBM
      #'  #' @param store should the sampled blocks be stored (and overwrite the existing data)? Default to FALSE

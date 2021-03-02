@@ -14,7 +14,7 @@ plotMatrix = function(Mat, dimLabels, clustering = NULL,plotOptions = list()){
 
   n1 <- dim(Mat)[1]
   n2 <- dim(Mat)[2]
-print(n1)
+
   if (is.null(rownames(Mat))){rownames(Mat) = as.factor(1:n1)}
   if (is.null(colnames(Mat))){colnames(Mat) = as.factor(1:n2)}
 
