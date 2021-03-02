@@ -16,7 +16,7 @@ NoisySBM <-
       #' @param noiseParam list of parameters for connectivity ...
       #' @param signalParam list of parameters for connectivity ...
       #' @param dimLabels optional label for the node (default is "nodeName")   ?
-      initialize = function(model, nbNodes, directed, blockProp, connectParam, dimLabels=c(node="nodeName"), covarParam=numeric(length(covarList)), noiseParam, signalParam) {
+      initialize = function(model, nbNodes, directed=FALSE, blockProp, connectParam, noiseParam, signalParam, dimLabels=c(rep("nodes",2))) {
 
         ## SANITY CHECKS (on parameters)
      #   stopifnot(length(dimLabels) == 1)
@@ -33,27 +33,27 @@ NoisySBM <-
     #    )
 
         # if (!directed) stopifnot(isSymmetric(connectParam$mean)) # connectivity and direction must agree
-        # super$initialize(model, directed, nbNodes, dimLabels, blockProp, connectParam, covarParam, covarList)
+         super$initialize(model, directed, nbNodes, dimLabels, blockProp, connectParam, covarParam, covarList)
       },
      #' #' @description a method to sample new block memberships for the current SBM
      #'  #' @param store should the sampled blocks be stored (and overwrite the existing data)? Default to FALSE
      #'  #' @return the sampled blocks
-     #'  rMemberships = function(store = FALSE) {
-     #'    Z <- t(rmultinom(private$dim, size = 1, prob = private$pi))
-     #'    if (store) private$Z <- Z
-     #'    Z
-     #'  },
+      # rMemberships = function(store = FALSE) {
+      #   Z <- t(rmultinom(private$dim, size = 1, prob = private$pi))
+      #   if (store) private$Z <- Z
+      #   Z
+      # },
      #'  #' @description a method to sample a network data (edges) for the current SBM
      #'  #' @param store should the sampled edges be stored (and overwrite the existing data)? Default to FALSE
      #'  #' @return the sampled network
-     #'  rEdges = function(store = FALSE) {
-     #'    Y <- suppressWarnings(private$sampling_func[[1]](self$nbNodes**2, list(mean = self$expectation, var = private$theta$var))) %>%
-     #'      matrix(private$dim, private$dim)
-     #'    diag(Y) <- NA
-     #'    if (!private$directed_) Y <- Y * lower.tri(Y) + t(Y * lower.tri(Y))
-     #'    if (store) private$Y <- Y
-     #'    Y
-     #'  },
+      # rEdges = function(store = FALSE) {
+      #   Y <- suppressWarnings(private$sampling_func[[1]](self$nbNodes**2, list(mean = self$expectation, var = private$theta$var))) %>%
+      #     matrix(private$dim, private$dim)
+      #   diag(Y) <- NA
+      #   if (!private$directed_) Y <- Y * lower.tri(Y) + t(Y * lower.tri(Y))
+      #   if (store) private$Y <- Y
+      #   Y
+      # },
      #'  #--------------------------------------------
      #'  #' @description prediction under the currently parameters
      #'  #' @param covarList a list of covariates. By default, we use the covariates with which the model was estimated
@@ -71,55 +71,56 @@ NoisySBM <-
      #'  },
       #' @description show method
       #' @param type character used to specify the type of SBM
-      show = function(type = "Noisy Stochastic Block Model") {super$show(type)},
+      show = function(type = "Noisy Stochastic Block Model") {super$show(type)}  ,
+
       #' @description basic matrix plot method for SimpleSBM object or mesoscopic plot
       #' @param type character for the type of plot: either 'data' (true connection), 'expected' (fitted connection) or 'meso' (mesoscopic view). Default to 'data'.
       #' @param ordered logical: should the rows and columns be reordered according to the clustering? Default to \code{TRUE}.
       #' @param plotOptions list with the parameters for the plot. See help of the corresponding S3 method for details.
       #' @return a ggplot2 object for the \code{'data'} and \code{'expected'}, a list with the igraph object \code{g}, the \code{layout} and the \code{plotOptions} for the \code{'meso'}
       #' @import ggplot2
-      # plot = function(type = c('data','expected','meso'), ordered = TRUE, plotOptions = list()) {
-      #
-      #   if(is.null(self$memberships)) {ordered <- FALSE; type <- 'data'}
-      #   if (ordered & !is.null(self$memberships))
-      #     clustering <- list(row = self$memberships)
-      #   else
-      #     clustering <- NULL
-      #
-      #   switch(match.arg(type),
-      #     "meso" =
-      #       plotMeso(
-      #         thetaMean  = private$theta$mean,
-      #         pi         = private$pi,
-      #         model      = private$model,
-      #         directed   = private$directed_,
-      #         bipartite  = FALSE,
-      #         nbNodes    = self$nbNodes,
-      #         nodeLabels = as.list(private$dimlab),
-      #         plotOptions),
-      #     "data" =
-      #       plotMatrix(self$networkData,
-      #                  private$dimlab,
-      #                  clustering, plotOptions),
-      #     "expected" =
-      #       plotMatrix(self$expectation,
-      #                  private$dimlab,
-      #                  clustering, plotOptions)
-      #   )
-      # }
+      plot = function(type = c('data','expected','meso'), ordered = TRUE, plotOptions = list()) {
+
+        if(is.null(self$memberships)) {ordered <- FALSE; type <- 'data'}
+        if (ordered & !is.null(self$memberships))
+          clustering <- list(row = self$memberships)
+        else
+          clustering <- NULL
+
+        switch(match.arg(type),
+          "meso" =
+            plotMeso(
+              thetaMean  = private$theta$mean,
+              pi         = private$pi,
+              model      = private$model,
+              directed   = private$directed_,
+              bipartite  = FALSE,
+              nbNodes    = self$nbNodes,
+              nodeLabels = as.list(private$dimlab),
+              plotOptions),
+          "data" =
+            plotMatrix(self$networkData,
+                       private$dimlab,
+                       clustering, plotOptions),
+          "expected" =
+            plotMatrix(self$expectation,
+                       private$dimlab,
+                       clustering, plotOptions)
+        )
+      }
     ),
     active = list(
 ### field with write access
       #' @field dimLabels a single character giving the label of the nodes
-      # dimLabels    = function(value) {
-      #   if (missing(value))
-      #     return(private$dimlab)
-      #   else {
-      #     stofifnot(is.atomic(value), is.character(value), length(value) == 1)
-      #     if (is.null(names(value))){names(value)  = c('node')}
-      #     private$dimlab <- value
-      #   }
-      # },
+       dimLabels    = function(value) {
+         if (missing(value))
+           return(private$dimlab)
+         else {
+           stofifnot(is.atomic(value), is.character(value), length(value) == 1)
+           if (is.null(names(value))){names(value)  = c('node')}
+           private$dimlab <- value
+         }
+       },
       #' @field blockProp vector of block proportions (aka prior probabilities of each block)
       blockProp   = function(value) {
         if (missing(value))

@@ -40,13 +40,13 @@ NoisySBM_fit <-
       #' @param dataMatrix square (noisy) matrix
       #' @param submodel character (\code{'Gauss'}, \code{'Gauss01'})
     #  #' @param directed logical, directed network or not. In not, \code{dataMatrix} must be symmetric.
-        initialize = function(dataMatrix, submodel) {  #rajouter directed plus tard
+        initialize = function(dataMatrix, submodel, dimLabels= c(node='nodes')) {  #rajouter directed plus tard
 
         ## SANITY CHECKS (on data)
         stopifnot(is.matrix(dataMatrix))                   # must be a matrix
         stopifnot(all.equal(nrow(dataMatrix),
                             ncol(dataMatrix)))             # matrix must be square
-        stopifnot(!isSymmetric(dataMatrix))    # symmetry and direction must agree
+        stopifnot(isSymmetric(dataMatrix))    # symmetry and direction must agree
 
         ## INITIALIZE THE SBM OBJECT ACCORDING TO THE DATA
         connectParam <- NA
@@ -69,6 +69,7 @@ NoisySBM_fit <-
                          directed     = FALSE,
                          nbNodes      = nrow(dataMatrix),
                          blockProp    = vector("numeric", 0),
+                         dimLabels    = dimLabels,
                          connectParam = connectParam,
                          signalParam = signalParam,
                          noiseParam = noiseParam)
