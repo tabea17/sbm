@@ -6,6 +6,10 @@ NoisySBM <-
   R6::R6Class(
     classname = "NoisySBM",
     inherit = SBM,
+
+    private=list(
+      modelFamily=NULL
+    ),
     public = list(
       #' @description constructor for SBM
       #' @param modelFamily character describing the type of model  (gauss ou exp ou poisson)
@@ -19,6 +23,8 @@ NoisySBM <-
       #' @param signalParam list of parameters for connectivity ...
       #' @param dimLabels optional label for the node (default is "nodeName")   ?
       initialize = function(modelFamily, nbNodes, directed=FALSE, blockProp, connectParam, noiseParam, signalParam, dimLabels=c(node="nodeName"), covarParam=numeric(length(covarList)), covarList=list()) {
+
+        private$modelFamily  =modelFamily
 
         ## SANITY CHECKS (on parameters)
      #   stopifnot(length(dimLabels) == 1)
@@ -56,6 +62,8 @@ NoisySBM <-
       #   if (store) private$Y <- Y
       #   Y
       # },
+
+
      #'  #--------------------------------------------
      #'  #' @description prediction under the currently parameters
      #'  #' @param covarList a list of covariates. By default, we use the covariates with which the model was estimated
