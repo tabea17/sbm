@@ -17,11 +17,16 @@ NoisySBM_fit <-
         private$J     <- private$noisySBMobject[[Q]]$convergence$J
         private$vICL  <- private$noisySBMobject[[Q]]$sbmParam$ICL
         parameters    <- private$noisySBMobject[[Q]]$theta
-        private$w <- parameters$w
+
+        ### FANNY : on avait ça
+        ###private$w <- parameters$w  ### FANNY : ils appellent ça : private$theta$mean. C'est sous le format matrice Q*Q
+
+        ### FANNY Je mettrai : MAIS pb de dim dans reorder. Semble plutot venir de private$pi
+        private$theta$mean <- wVectToMat(parameters$w, Q)
         private$nu0 <- parameters$nu0
         private$nu <- parameters$nu
-      #  private$beta  <- parameters$beta ## NULL if no covariates
-     #   private$theta <- switch(private$BMobject$model_name,
+        # private$beta  <- parameters$beta ## NULL if no covariates
+        # private$theta <- switch(private$BMobject$model_name,
         #   "bernoulli"                 = list(mean = parameters$pi),
         #   "bernoulli_covariates"      = list(mean = .logistic(parameters$m)),
         #   "bernoulli_covariates_fast" = list(mean = .logistic(parameters$m)),
@@ -31,20 +36,18 @@ NoisySBM_fit <-
         #   "gaussian_covariates"       = list(mean = parameters$mu, var = parameters$sigma2),
         #   "ZIgaussian"                = list(mean = parameters$mu, var = parameters$sigma2, p0 = parameters$p0),
         # )
-        private$Z  <- t(private$noisySBMobject[[Q]]$sbmParam$clusterProba)  #verif n*Q chez eux ?
+        private$Z  <- t(private$noisySBMobject[[Q]]$sbmParam$clusterProba)
         private$pi <- parameters$pi
         private$edgeProba <- private$noisySBMobject[[Q]]$sbmParam$edgeProba  #N_Q x N matrix
       }
     ),
     public = list(
-      #' @description constructor for a Noisy SBM fit
+      #' @description constructor for a NoisySBM fit
       #' @param dataMatrix square (noisy) matrix
       #' @param submodel character (\code{'Gauss'}, \code{'Gauss01'})
-    #  #' @param directed logical, directed network or not. In not, \code{dataMatrix} must be symmetric.
-       # initialize = function(dataMatrix, submodel, sbmSize=list(Qmin=1, Qmax=NULL, explor=1.5), filename=NULL ) {  #rajouter directed plus tard
-          initialize = function(dataMatrix, submodel, directed) {
+      #' @param directed logical, directed network or not. In not, \code{dataMatrix} must be symmetric.
+      initialize = function(dataMatrix, submodel, directed) {
 
-            private$submodel=submodel
         ## SANITY CHECKS (on data)
         stopifnot(is.matrix(dataMatrix))                   # must be a matrix
         stopifnot(all.equal(nrow(dataMatrix),
@@ -63,21 +66,22 @@ NoisySBM_fit <-
         #   "gaussian"   = list(mean = matrix(0, 0, 0), var = 1),
         #   "ZIgaussian" = list(mean = matrix(0, 0, 0), var = 1, p0 = 0),
         # )
-    #    initialize = function(model, nbNodes, directed, blockProp, connectParam, dimLabels=c(node="nodeName"), covarParam=numeric(length(covarList)), noiseParam, signalParam) {
-          if (submodel %in% c('Gauss','Gauss0','Gauss01','GaussEqVar','Gauss0EqVar','Gauss0Var1','Gauss2distr','GaussAffil'))
+
+       if (submodel %in% c('Gauss','Gauss0','Gauss01','GaussEqVar','Gauss0EqVar','Gauss0Var1','Gauss2distr','GaussAffil'))
             modelFamily <- 'Gauss'
-          if (submodel %in% c('Exp','ExpGamma','Gamma'))
+       if (submodel %in% c('Exp','ExpGamma','Gamma'))
             modelFamily <- 'Gamma'
 
-        super$initialize(modelFamily       = modelFamily,
+        super$initialize(modelFamily  = modelFamily,
                          nbNodes      = nrow(dataMatrix),
                          directed     = FALSE,
                          blockProp    = vector("numeric", 0),
                          connectParam = connectParam,
-                    #     dimLabels    = dimLabels,
-                          signalParam = signalParam,
+                    #    dimLabels    = dimLabels,
+                         signalParam = signalParam,
                          noiseParam = noiseParam)
         private$Y <- dataMatrix
+        private$submodel=submodel
       },
       #--------------------------------------------
       #' @description function to perform optimization
@@ -92,73 +96,74 @@ NoisySBM_fit <-
       #'  \item{"nbBlocksRange"}{minimal and maximal number or blocks explored}
       #'  \item{"fast"}{logical: should approximation be used for Bernoulli model with covariates. Default to \code{TRUE}}
       #' }
-   #    optimize = function(estimOptions = list()){
-   #
-   # #     if(private$model == 'ZIgaussian') stop("Inference not yet implemented for ZI gaussian network")
-   #
-   #      currentOptions <- list(
-   #        verbosity     = 1,
-   #        plot          = TRUE,
-   #        explorFactor  = 1.5,
-   #        nbBlocksRange = c(1,NULL),
-   #        nbCores       = 2,
-   #        fast          = TRUE
-   #      )
-   #      currentOptions[names(estimOptions)] <- estimOptions
-   #
-   #      currentOptions <- list(
-   #        verbosity     = 1,
-   #        plot          = TRUE,
-   #        explorFactor  = 1.5,
-   #        nbBlocksRange = c(1,NULL),
-   #        nbCores       = 2,
-   #        fast          = TRUE
-   #      )
-   #      currentOptions[names(estimOptions)] <- estimOptions
-   #
-        ## Transform estimOptions to a suited for blockmodels list of options
-        # blockmodelsOptions <- list(
-        #   verbosity          = currentOptions$verbosity,
-        #   plotting           = if(currentOptions$plot) character(0) else "",
-        #   explore_min        = currentOptions$nbBlocksRange[1],
-        #   explore_max        = currentOptions$nbBlocksRange[2],
-        #   ncores             = currentOptions$nbCores,
-        #   exploration_factor = currentOptions$explorFactor
-        #  )
-        # fast <- currentOptions$fast
-        #
-        # sbmSize=list(Qmin=1, Qmax=NULL, explor=1.5)
-
-   optimize = function(sbmSize=list(Qmin=1, Qmax=NULL, explor=1.5), filename=NULL){
-
-          ## generating arguments for blockmodels call
-    #    args <- list(membership_type =  ifelse(!private$directed_, "SBM_sym", "SBM"), adj = .na2zero(private$Y))
-    #    if (self$nbCovariates > 0) args$covariates <- private$X
-     #   args <- c(args, blockmodelsOptions)
-
-        ## model construction
+      # optimize = function(estimOptions = list()){
+      #
+      #  if(private$model == 'ZIgaussian') stop("Inference not yet implemented for ZI gaussian network")
+      #
+      #   currentOptions <- list(
+      #     verbosity     = 1,
+      #     plot          = TRUE,
+      #     explorFactor  = 1.5,
+      #     nbBlocksRange = c(1,NULL),
+      #     nbCores       = 2,
+      #     fast          = TRUE
+      #   )
+      #   currentOptions[names(estimOptions)] <- estimOptions
+      #
+      #   currentOptions <- list(
+      #     verbosity     = 1,
+      #     plot          = TRUE,
+      #     explorFactor  = 1.5,
+      #     nbBlocksRange = c(1,NULL),
+      #     nbCores       = 2,
+      #     fast          = TRUE
+      #   )
+      #   currentOptions[names(estimOptions)] <- estimOptions
+      #
+      #   ## Transform estimOptions to a suited for blockmodels list of options
+      #   blockmodelsOptions <- list(
+      #     verbosity          = currentOptions$verbosity,
+      #     plotting           = if(currentOptions$plot) character(0) else "",
+      #     explore_min        = currentOptions$nbBlocksRange[1],
+      #     explore_max        = currentOptions$nbBlocksRange[2],
+      #     ncores             = currentOptions$nbCores,
+      #     exploration_factor = currentOptions$explorFactor
+      #    )
+      #   fast <- currentOptions$fast
+      #
+      #  ## generating arguments for blockmodels call
+      #  args <- list(membership_type =  ifelse(!private$directed_, "SBM_sym", "SBM"), adj = .na2zero(private$Y))
+      #  if (self$nbCovariates > 0) args$covariates <- private$X
+      #  args <- c(args, blockmodelsOptions)
+      #
+      #  ## model construction
       #  model_type <- ifelse(self$nbCovariates > 0, paste0(private$model,"_covariates"), private$model)
-     #   if (model_type == 'bernoulli_covariates' & fast == TRUE) model_type <- 'bernoulli_covariates_fast'
+      #  if (model_type == 'bernoulli_covariates' & fast == TRUE) model_type <- 'bernoulli_covariates_fast'
       #  private$BMobject <- do.call(paste0("BM_", model_type), args)
+      #
+      #  ## performing estimation
+      #  private$BMobject$estimate()
+      #
+      #  ## Exporting blockmodels output to simpleSBM_fit fields
+      #  private$import_from_BM()
+      #
+      #     invisible(private$BMobject)
+      # },
+      #
 
-        ## performing estimation
-     #   private$BMobject$estimate()
+       optimize = function(sbmSize=list(Qmin=1, Qmax=2, explor=0), filename=NULL){    # A CHANGER pour laisser la main à l'utilisateur list(Qmin=1, Qmax=NULL, explor=1.5)
+       private$noisySBMobject <- fitNSBM(private$Y, private$submodel, sbmSize, filename)
 
-        private$noisySBMobject <- fitNSBM(private$Y, private$submodel, sbmSize, filename)
-
-
-        ## Exporting blockmodels output to simpleSBM_fit fields
-     #   private$import_from_BM()
-
-     #   invisible(private$BMobject)
+       # private$import_from_noisySBM()   #### FANNY :  à rajouter ? cf gremlins . Mettre des variables en active ? nu0... ?
       },
+
       #' @description method to select a specific model among the ones fitted during the optimization.
       #'  Fields of the current SBM_fit will be updated accordingly.
       #' @param index integer, the index of the model to be selected (row number in storedModels)
       setModel = function(index) {
-        stopifnot(!is.null(private$noisyBMobject))
+        stopifnot(!is.null(private$noisySBMobject))
         stopifnot(index %in% seq.int(nrow(self$storedModels)))
-        private$import_from_BM(index)
+        private$import_from_noisySBM(index)
         self$reorder()
       },
       #' @description permute group labels by order of decreasing probability
@@ -168,7 +173,7 @@ NoisySBM_fit <-
         private$theta$mean <- private$theta$mean[o,o]
         private$Z <- private$Z[, o, drop = FALSE]
       },
-      #--------------------------------------------
+      # #--------------------------------------------
       #' @description show method
       #' @param type character used to specify the type of SBM
       show = function(type = "Fit of a Simple Stochastic Block Model"){
@@ -179,69 +184,33 @@ NoisySBM_fit <-
         cat("  predict, fitted, $setModel, $reorder \n")
       }
     ),
-    active = list(
+
+   active = list(
       #' @field loglik double: approximation of the log-likelihood (variational lower bound) reached
       loglik = function(value) {private$J},
       #' @field ICL double: value of the integrated classification log-likelihood
       ICL    = function(value) {private$vICL},
+
       #' @field penalty double, value of the penalty term in ICL
-      penalty  = function(value) {unname((self$nbConnectParam + self$nbCovariates) * log(self$nbDyads) + (self$nbBlocks-1) * log(self$nbNodes))},
-      #' @field entropy double, value of the entropy due to the clustering distribution
+      ### FANNY : Revoir : pourquoi nbConnectParam en self ????
+         penalty  = function(value) {unname((self$nbConnectParam + self$nbCovariates) * log(self$nbDyads) + (self$nbBlocks-1) * log(self$nbNodes))},
+
+      ### FANNY : n'éxécute pas la fct .xlogx
+          #' @field entropy double, value of the entropy due to the clustering distribution
       entropy  = function(value) {-sum(.xlogx(private$Z))},
+
       #' @field storedModels data.frame of all models fitted (and stored) during the optimization
       storedModels = function(value) {
-        nbBlocks <- sapply(private$noisyBMobject, function(m) m$sbmParam$Q)
-      #  nbBlocks <- unlist(sapply(private$noisyBMobject$memberships, function(m) ncol(m$)))
+        nbBlocks <- sapply(private$noisySBMobject, function(m) m$sbmParam$Q)
         N_Q <- nbConnectParam <- nbBlocks*(nbBlocks+1)/2         # A changer si dirige
-      #  nbConnectParam <- unlist(sapply(private$noisyBMobject$model_parameters, function(param) param$n_parameters))
-        dimW <- N_Q
-        if (submodel %in% c('Gauss0', 'ExpGamma')){
-          dimH0 <- 1
-          dimH1 <- 2*N_Q
-        }
-        if (submodel=='Gauss'){
-          dimH0 <- 2
-          dimH1 <- 2*N_Q
-        }
-        if (submodel=='Gauss01'){
-          dimH0 <- 0
-          dimH1 <- 2*N_Q
-        }
-        if (submodel=='Gauss0Var1'){
-          dimH0 <- 0
-          dimH1 <- N_Q
-        }
-        if (submodel=='GaussEqVar'){
-          dimH0 <- 2 # = 1 gaussian mean under H0 + 1 common variance for all gaussians in the model
-          dimH1 <- N_Q # nb of gaussian means under H1
-        }
-        if (submodel=='Gauss0EqVar'){
-          dimH0 <- 1 # 1 common variance for all gaussians in the model
-          dimH1 <- N_Q # nb of gaussian means under H1
-        }
-        if (submodel=='GaussAffil'){
-          dimH0 <- 2
-          dimH1 <- 4
-        }
-        if (submodel=='Gauss2distr'){
-          dimH0 <- 2
-          dimH1 <- 2
-        }
-        if (submodel=='Exp'){
-          dimH0 <- 1
-          dimH1 <- N_Q
-        }
-        dimParam <- dimW + dimH0 + dimH1
-
+        dimParamSubmodel <- nbParamSubmodel(private$submodel, nbBlocks)
         U <- data.frame(
           indexModel  = nbBlocks,
-       #   nbParams = nbConnectParam + nbBlocks - 1,
-          nbParams = dimParam + nbBlocks - 1,
-          nbBlocks = nbBlocks,
-          ICL      = sapply(private$noisyBMobject, function(m) m$sbmParam$ICL),
-         #   ICL=   private$noisySBMobject$ICL,
-         # loglik   = private$BMobject$PL
-          loglik   = sapply(private$noisyBMobject, function(m) m$convergence$complLogLik)
+          # nbParams = nbConnectParam + nbBlocks - 1,
+          nbParams = dimParamSubmodel + nbBlocks - 1,
+          nbBlocks = nbBlocks,  ### FANNY : pourquoi le réafficher ????????????????????????
+          ICL      = sapply(private$noisySBMobject, function(m) m$sbmParam$ICL),
+          loglik   = sapply(private$noisySBMobject, function(m) m$convergence$complLogLik)
           )
         U[!is.na(U$nbParams),]
       }

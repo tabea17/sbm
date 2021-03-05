@@ -10,42 +10,44 @@ NoisySBM <-
     private=list(
       modelFamily=NULL
     ),
+
     public = list(
-      #' @description constructor for SBM
+      #' @description constructor for noisySBM
       #' @param modelFamily character describing the type of model  (gauss ou exp ou poisson)
       #' @param nbNodes number of nodes in the network
-      #' @param directed logical, directed network or not.
+      #' @param directed logical, directed network or not. Code uniquement en non dirige pour le moment
       #' @param blockProp parameters for block proportions (vector of list of vectors)
       #' @param connectParam list of parameters for connectivity with a matrix of means 'mean' and an optional scalar for the variance 'var'. The size of mu must match \code{blockProp} length
       #' @param covarParam optional vector of covariates effect
       #' @param covarList optional list of covariates data
-      #'@param noiseParam list of parameters for connectivity ...
+      #' @param noiseParam list of parameters for connectivity ...
       #' @param signalParam list of parameters for connectivity ...
-      #' @param dimLabels optional label for the node (default is "nodeName")   ?
+      #' @param dimLabels optional label for the node
       initialize = function(modelFamily, nbNodes, directed=FALSE, blockProp, connectParam, noiseParam, signalParam, dimLabels=c(node="nodeName"), covarParam=numeric(length(covarList)), covarList=list()) {
 
-        private$modelFamily  =modelFamily
-
         ## SANITY CHECKS (on parameters)
-     #   stopifnot(length(dimLabels) == 1)
-    #    stopifnot(is.atomic(blockProp), all(blockProp > 0), all(blockProp < 1)) # positive proportions
-    #    stopifnot(all.equal(length(blockProp), ncol(connectParam$mean)),        # dimensions match between vector of
-    #              all.equal(length(blockProp), nrow(connectParam$mean)))        # block proportion and connectParam$mean
+     #  stopifnot(length(dimLabels) == 1)
+     #  stopifnot(is.atomic(blockProp), all(blockProp > 0), all(blockProp < 1)) # positive proportions
+     #  stopifnot(all.equal(length(blockProp), ncol(connectParam$mean)),        # dimensions match between vector of
+     #  all.equal(length(blockProp), nrow(connectParam$mean)))        # block proportion and connectParam$mean
 
         ## Check that connectivity parameters and model are consistent
-    #    switch(model,
-    #      "bernoulli"  = stopifnot(all(connectParam$mean >= 0), all(connectParam$mean <= 1)),
-    #      "poisson"    = stopifnot(all(connectParam$mean >= 0)),
-    #      "gaussian"   = stopifnot(length(connectParam$var) == 1, connectParam$var > 0),
-    #      "ZIgaussian" = stopifnot(all(connectParam$p0 >= 0), all(connectParam$p0 <= 1))
-    #    )
+     #  switch(model,
+     #    "bernoulli"  = stopifnot(all(connectParam$mean >= 0), all(connectParam$mean <= 1)),
+     #    "poisson"    = stopifnot(all(connectParam$mean >= 0)),
+     #    "gaussian"   = stopifnot(length(connectParam$var) == 1, connectParam$var > 0),
+     #    "ZIgaussian" = stopifnot(all(connectParam$p0 >= 0), all(connectParam$p0 <= 1))
+     #         )
 
-        # if (!directed) stopifnot(isSymmetric(connectParam$mean)) # connectivity and direction must agree
-         super$initialize(model='bernoulli', directed, nbNodes, dimLabels, blockProp, connectParam, covarParam, covarList)
-      },
+     # if (!directed) stopifnot(isSymmetric(connectParam$mean)) # connectivity and direction must agree
+
+        private$modelFamily  = modelFamily
+        super$initialize(model='bernoulli', directed, nbNodes, dimLabels, blockProp, connectParam, covarParam, covarList)
+         },
+
      #' #' @description a method to sample new block memberships for the current SBM
-     #'  #' @param store should the sampled blocks be stored (and overwrite the existing data)? Default to FALSE
-     #'  #' @return the sampled blocks
+     #' #' @param store should the sampled blocks be stored (and overwrite the existing data)? Default to FALSE
+     #' #' @return the sampled blocks
       # rMemberships = function(store = FALSE) {
       #   Z <- t(rmultinom(private$dim, size = 1, prob = private$pi))
       #   if (store) private$Z <- Z
@@ -79,9 +81,10 @@ NoisySBM <-
      #'    }
      #'    mu
      #'  },
+
       #' @description show method
       #' @param type character used to specify the type of SBM
-      show = function(type = "Noisy Stochastic Block Model") {super$show(type)}  ,
+      show = function(type = "Noisy Stochastic Block Model") {super$show(type)},
 
       #' @description basic matrix plot method for SimpleSBM object or mesoscopic plot
       #' @param type character for the type of plot: either 'data' (true connection), 'expected' (fitted connection) or 'meso' (mesoscopic view). Default to 'data'.
@@ -119,8 +122,9 @@ NoisySBM <-
         )
       }
     ),
+
     active = list(
-### field with write access
+    ### field with write access
       #' @field dimLabels a single character giving the label of the nodes
        dimLabels    = function(value) {
          if (missing(value))
@@ -158,6 +162,7 @@ NoisySBM <-
           private$theta <- value
         }
       },
+
       #' @field probMemberships  matrix of estimated probabilities for block memberships for all nodes
       probMemberships = function(value) {
         if (missing(value))
@@ -167,7 +172,7 @@ NoisySBM <-
           private$Z <- value
         }
       },
-### field with access only
+     ### field with access only
       #' @field nbBlocks number of blocks
       nbBlocks    = function(value) {length(private$pi)},
       #' @field nbDyads number of dyads (potential edges in the network)
