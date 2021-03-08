@@ -14,17 +14,17 @@ NoisySBM_fit <-
       vICL           = NULL, # approximation of the ICL
       noisySBMobject       = NULL, # blockmodels output (used to stored the optimization results when blockmodels is used)
       import_from_noisySBM = function(Q = noisySBM::getBestQ(private$noisySBMobject)$Q) { # a function updating the Class
-        private$J     <- private$noisySBMobject[[Q]]$convergence$J
-        private$vICL  <- private$noisySBMobject[[Q]]$sbmParam$ICL
-        private$parameters    <- private$noisySBMobject[[Q]]$theta   ### verif
-
+         fit <- private$noisySBMobject[[Q]]
+         private$J     <- fit$convergence$J
+         private$vICL  <- fit$sbmParam$ICL
+         private$parameters    <- fit$theta   ### verif
+         private$parameters$w <- wVectToMat(fit$theta$w, Q)
         ### FANNY : on avait ça
         ###private$w <- parameters$w  ### FANNY : ils appellent ça : private$theta$mean. C'est sous le format matrice Q*Q
-
         ### FANNY Je mettrai : MAIS pb de dim dans reorder. Semble plutot venir de private$pi
-        private$theta$mean <- wVectToMat(parameters$w, Q)
-        private$nu0 <- parameters$nu0
-        private$nu <- parameters$nu
+     #   private$theta$mean <- wVectToMat(parameters$w, Q)
+    #    private$nu0 <- parameters$nu0
+     #   private$nu <- parameters$nu
         # private$beta  <- parameters$beta ## NULL if no covariates
         # private$theta <- switch(private$BMobject$model_name,
         #   "bernoulli"                 = list(mean = parameters$pi),
@@ -36,9 +36,9 @@ NoisySBM_fit <-
         #   "gaussian_covariates"       = list(mean = parameters$mu, var = parameters$sigma2),
         #   "ZIgaussian"                = list(mean = parameters$mu, var = parameters$sigma2, p0 = parameters$p0),
         # )
-        private$Z  <- t(private$noisySBMobject[[Q]]$sbmParam$clusterProba)
-        private$pi <- parameters$pi
-        private$edgeProba <- private$noisySBMobject[[Q]]$sbmParam$edgeProba  #N_Q x N matrix
+        private$Z  <- t(fit$sbmParam$clusterProba)
+        private$pi <- fit$theta$pi #parameters$pi
+       # private$edgeProba <- fit$sbmParam$edgeProba  #N_Q x N matrix
       }
     ),
     public = list(
@@ -55,10 +55,10 @@ NoisySBM_fit <-
         stopifnot(isSymmetric(dataMatrix))    # symmetry and direction must agree
 
         ## INITIALIZE THE SBM OBJECT ACCORDING TO THE DATA
-        connectParam <- list(mean=NA)
-        signalParam <- NA
-        noiseParam <- NA
-        dimLabels= c(node="nodeName")
+      #  connectParam <- list(mean=NA)
+      #  signalParam <- NA
+      #  noiseParam <- NA
+      #  dimLabels= c(node="nodeName")
 
         # connectParam <- switch(model,
         #   "bernoulli"  = list(mean = matrix(0, 0, 0)),
@@ -76,13 +76,14 @@ NoisySBM_fit <-
                          nbNodes      = nrow(dataMatrix),
                          directed     = FALSE,
                          blockProp    = vector("numeric", 0),
-                         connectParam = connectParam,
-                    #    dimLabels    = dimLabels,
-                         signalParam = signalParam,
-                         noiseParam = noiseParam)
-        private$Y <- dataMatrix
+                         connectParam =  list(mean = matrix(0, 0, 0)), #connectParam,
+                         dimLabels    =  c(node="nodeName"), #dimLabels,
+                         signalParam = 0,
+                         noiseParam = 0,
+                         covarList    = NA)
+        private$dataMatrix <- dataMatrix
         private$submodel=submodel
-      },
+        },
       #--------------------------------------------
       #' @description function to perform optimization
       #' @param estimOptions a list of parameters controlling the inference algorithm and model selection. See details.
@@ -151,10 +152,10 @@ NoisySBM_fit <-
       # },
       #
 
-       optimize = function(sbmSize=list(Qmin=1, Qmax=2, explor=0), filename=NULL){    # A CHANGER pour laisser la main à l'utilisateur list(Qmin=1, Qmax=NULL, explor=1.5)
-       private$noisySBMobject <- fitNSBM(private$Y, private$submodel, sbmSize, filename)
+       optimize = function(sbmSize=list(Qmin=1, Qmax=NULL, explor=1.5), filename=NULL){    # A CHANGER pour laisser la main à l'utilisateur list(Qmin=1, Qmax=NULL, explor=1.5)
+       private$noisySBMobject <- fitNSBM(private$dataMatrix, private$submodel, sbmSize, filename)
 
-       # private$import_from_noisySBM()   #### FANNY :  à rajouter ? cf gremlins . Mettre des variables en active ? nu0... ?
+       private$import_from_noisySBM()   #### FANNY :  à rajouter ? cf gremlins . Mettre des variables en active ? nu0... ?
       },
 
       #' @description method to select a specific model among the ones fitted during the optimization.
@@ -168,9 +169,9 @@ NoisySBM_fit <-
       },
       #' @description permute group labels by order of decreasing probability
       reorder = function(){
-        o <- order(private$theta$mean %*% private$pi, decreasing = TRUE)
+        o <- order(private$parameters$w %*% private$pi, decreasing = TRUE)
         private$pi <- private$pi[o]
-        private$theta$mean <- private$theta$mean[o,o]
+        private$parameters$w <- private$parameters$w[o,o]   #pb si on choisit Q= 1 et w n'est pas une matrice ?
         private$Z <- private$Z[, o, drop = FALSE]
       },
       # #--------------------------------------------
@@ -195,7 +196,7 @@ NoisySBM_fit <-
       ### FANNY : Revoir : pourquoi nbConnectParam en self ????
          penalty  = function(value) {unname((self$nbConnectParam + self$nbCovariates) * log(self$nbDyads) + (self$nbBlocks-1) * log(self$nbNodes))},
 
-      ### FANNY : n'éxécute pas la fct .xlogx
+      ### FANNY :ressort tjs 0 ?
           #' @field entropy double, value of the entropy due to the clustering distribution
       entropy  = function(value) {-sum(.xlogx(private$Z))},
 

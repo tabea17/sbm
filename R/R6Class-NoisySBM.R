@@ -8,7 +8,9 @@ NoisySBM <-
     inherit = SBM,
 
     private=list(
-      modelFamily=NULL
+      modelFamily=NULL,
+      parameters = NULL,
+      dataMatrix = NULL
     ),
 
     public = list(
@@ -23,7 +25,7 @@ NoisySBM <-
       #' @param noiseParam list of parameters for connectivity ...
       #' @param signalParam list of parameters for connectivity ...
       #' @param dimLabels optional label for the node
-      initialize = function(modelFamily, nbNodes, directed=FALSE, blockProp, connectParam, noiseParam, signalParam, dimLabels=c(node="nodeName"), covarParam=numeric(length(covarList)), covarList=list()) {
+      initialize = function(modelFamily, nbNodes, directed=FALSE, blockProp, connectParam, noiseParam, signalParam, dimLabels=c("nodeName"), covarParam=numeric(length(covarList)), covarList=list()) {
 
         ## SANITY CHECKS (on parameters)
      #  stopifnot(length(dimLabels) == 1)
@@ -42,6 +44,7 @@ NoisySBM <-
      # if (!directed) stopifnot(isSymmetric(connectParam$mean)) # connectivity and direction must agree
 
         private$modelFamily  = modelFamily
+        private$parameters = list(pi = blockProp, w=connectParam$mean, nu0=noiseParam, nu=signalParam)
         super$initialize(model='bernoulli', directed, nbNodes, dimLabels, blockProp, connectParam, covarParam, covarList)
          },
 
@@ -69,7 +72,7 @@ NoisySBM <-
      #'  #' @param theta_p0 a threshold...
      #'  #' @return a matrix of expected values for each dyad
       predict = function() {                          # donne grande matrice des w_ql
-        mu <- private$Z %*% private$theta$mean %*% t(private$Z)
+        mu <- private$Z %*% private$parameters$w %*% t(private$Z)
         mu
       },
 
@@ -83,7 +86,7 @@ NoisySBM <-
       #' @param plotOptions list with the parameters for the plot. See help of the corresponding S3 method for details.
       #' @return a ggplot2 object for the \code{'data'} and \code{'expected'}, a list with the igraph object \code{g}, the \code{layout} and the \code{plotOptions} for the \code{'meso'}
       #' @import ggplot2
-      plot = function(type = c('data','expected','meso'), ordered = TRUE, plotOptions = list()) {
+      plot = function(type = c('data','expected','meso', 'latentNetwork'), ordered = TRUE, plotOptions = list()) {
 
         if(is.null(self$memberships)) {ordered <- FALSE; type <- 'data'}
         if (ordered & !is.null(self$memberships))
@@ -94,7 +97,7 @@ NoisySBM <-
         switch(match.arg(type),
           "meso" =
             plotMeso(
-              thetaMean  = private$theta$mean,
+              thetaMean  = private$parameters$w, #private$theta$mean,
               pi         = private$pi,
               model      = private$model,
               directed   = private$directed_,
@@ -103,6 +106,11 @@ NoisySBM <-
               nodeLabels = as.list(private$dimlab),
               plotOptions),
           "data" =
+            plotMatrix(self$networkObs,
+                       private$dimlab,
+                       clustering, plotOptions),
+
+          "latentNetwork" =
             plotMatrix(self$networkData,
                        private$dimlab,
                        clustering, plotOptions),
@@ -131,15 +139,17 @@ NoisySBM <-
         if (missing(value))
           return(private$pi)
         else {
-          stopifnot(is.numeric(value), is.atomic(value),
-                    all(value > 0), all(value < 1)) # positive proportions
+     #     stopifnot(is.numeric(value), is.atomic(value),
+     #               all(value > 0), all(value < 1)) # positive proportions
           private$pi <- value
+          private$parameters$pi <- value
         }
       },
       #' @field connectParam parameters associated to the connectivity of the SBM, e.g. matrix of inter/inter block probabilities when model is Bernoulli
       connectParam   = function(value) {
         if (missing(value))
-          return(private$theta)
+          #return(private$parameters$w)
+        return(list(mean=private$parameters$w))
         else {
           # stopifnot(is.list(value))
           # ## Check that connectivity parameters and model are consistent
@@ -150,22 +160,22 @@ NoisySBM <-
           #   "ZIgaussian" = stopifnot(all(value$p0 >= 0), all(value$p0 <= 1))
           # )
           # if (!self$directed) stopifnot(isSymmetric(value$mean)) # connectivity and direction must agree
-          private$theta <- value
+          private$parameters$w <- value
         }
       },
 
-      # ### A FAIRE
-      # signalParam   = function(value) {
-      #   if (missing(value))
-      #     return(private$signalParam)
-      # },
-      # noiseParam   = function(value) {
-      #   if (missing(value))
-      #     return(private$theta)
-      # },
 
-
-      #' @field probMemberships  matrix of estimated probabilities for block memberships for all nodes
+      signalParam   = function(value) {
+        if (missing(value))
+          return(private$parameters$nu)
+        else { private$parameters$nu <- value }
+      },
+      noiseParam   = function(value) {
+        if (missing(value))
+          return(private$parameters$nu0)
+        else { private$parameters$nu0 <- value }
+      },
+     #' @field probMemberships  matrix of estimated probabilities for block memberships for all nodes
       probMemberships = function(value) {
         if (missing(value))
           return(private$Z)
@@ -184,7 +194,10 @@ NoisySBM <-
       #' @field memberships vector of clustering
       memberships = function(value) {if (!is.null(private$Z)) as_clustering(private$Z)},
       #' @field indMemberships matrix for clustering memberships
-      indMemberships = function(value) {as_indicator(as_clustering(private$Z))}
+      indMemberships = function(value) {as_indicator(as_clustering(private$Z))},
+     networkObs = function(value) {return(private$dataMatrix)},   ##FANNY : j'ai rajoute
+      param = function(value) {private$parameters}
     )
   )
+
 
