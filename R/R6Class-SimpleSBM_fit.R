@@ -164,7 +164,7 @@ SimpleSBM_fit <-
         U <- data.frame(
           indexModel  = nbBlocks,
           nbParams = nbConnectParam + nbBlocks - 1,
-          nbBlocks = nbBlocks,
+          nbBlocks = nbBlocks,  ### ON affiche 2 fois nbBlocks ????
           ICL      = private$BMobject$ICL,
           loglik   = private$BMobject$PL
           )

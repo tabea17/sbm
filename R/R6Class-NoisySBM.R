@@ -48,11 +48,11 @@ NoisySBM <-
      #' #' @description a method to sample new block memberships for the current SBM
      #' #' @param store should the sampled blocks be stored (and overwrite the existing data)? Default to FALSE
      #' #' @return the sampled blocks
-      # rMemberships = function(store = FALSE) {
-      #   Z <- t(rmultinom(private$dim, size = 1, prob = private$pi))
-      #   if (store) private$Z <- Z
-      #   Z
-      # },
+      rMemberships = function(store = FALSE) {
+        Z <- t(rmultinom(private$dim, size = 1, prob = private$pi))
+        if (store) private$Z <- Z
+        Z
+      },
      #'  #' @description a method to sample a network data (edges) for the current SBM
      #'  #' @param store should the sampled edges be stored (and overwrite the existing data)? Default to FALSE
      #'  #' @return the sampled network
@@ -71,16 +71,10 @@ NoisySBM <-
      #'  #' @param covarList a list of covariates. By default, we use the covariates with which the model was estimated
      #'  #' @param theta_p0 a threshold...
      #'  #' @return a matrix of expected values for each dyad
-     #'  predict = function(covarList = self$covarList, theta_p0 = 0) {
-     #'    stopifnot(is.list(covarList), self$nbCovariates == length(covarList))
-     #'    mu <- private$Z %*% ( ((1-theta_p0)>0.5) * private$theta$mean ) %*% t(private$Z)
-     #'    if (self$nbCovariates > 0) {
-     #'      stopifnot(all(sapply(covarList, nrow) == self$nbNodes,
-     #'                    sapply(covarList, ncol) == self$nbNodes))
-     #'      mu <- private$invlink[[1L]](private$link[[1L]](mu) + self$covarEffect)
-     #'    }
-     #'    mu
-     #'  },
+      predict = function() {                          # donne grande matrice des w_ql
+        mu <- private$Z %*% private$theta$mean %*% t(private$Z)
+        mu
+      },
 
       #' @description show method
       #' @param type character used to specify the type of SBM
