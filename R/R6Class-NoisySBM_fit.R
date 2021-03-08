@@ -16,7 +16,7 @@ NoisySBM_fit <-
       import_from_noisySBM = function(Q = noisySBM::getBestQ(private$noisySBMobject)$Q) { # a function updating the Class
         private$J     <- private$noisySBMobject[[Q]]$convergence$J
         private$vICL  <- private$noisySBMobject[[Q]]$sbmParam$ICL
-        parameters    <- private$noisySBMobject[[Q]]$theta
+        private$parameters    <- private$noisySBMobject[[Q]]$theta   ### verif
 
         ### FANNY : on avait ça
         ###private$w <- parameters$w  ### FANNY : ils appellent ça : private$theta$mean. C'est sous le format matrice Q*Q

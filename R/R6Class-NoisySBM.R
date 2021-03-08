@@ -56,17 +56,14 @@ NoisySBM <-
      #'  #' @description a method to sample a network data (edges) for the current SBM
      #'  #' @param store should the sampled edges be stored (and overwrite the existing data)? Default to FALSE
      #'  #' @return the sampled network
-      # rEdges = function(store = FALSE) {
-      #   Y <- suppressWarnings(private$sampling_func[[1]](self$nbNodes**2, list(mean = self$expectation, var = private$theta$var))) %>%
-      #     matrix(private$dim, private$dim)
-      #   diag(Y) <- NA
-      #   if (!private$directed_) Y <- Y * lower.tri(Y) + t(Y * lower.tri(Y))
-      #   if (store) private$Y <- Y
-      #   Y
-      # },
+      rEdges = function(store = FALSE) {
+        YandX <- rnsbmObs(private$parameters, private$Z, private$modelFamily, private$directed_)
+        if (store) private$Y <- YandX$latentAdj
+        if (store) private$dataMatrix <- YandX$dataMatrix
+        YandX   # attention liste chez nous
+      },
 
-
-     #'  #--------------------------------------------
+      #'  #--------------------------------------------
      #'  #' @description prediction under the currently parameters
      #'  #' @param covarList a list of covariates. By default, we use the covariates with which the model was estimated
      #'  #' @param theta_p0 a threshold...
@@ -156,6 +153,17 @@ NoisySBM <-
           private$theta <- value
         }
       },
+
+      # ### A FAIRE
+      # signalParam   = function(value) {
+      #   if (missing(value))
+      #     return(private$signalParam)
+      # },
+      # noiseParam   = function(value) {
+      #   if (missing(value))
+      #     return(private$theta)
+      # },
+
 
       #' @field probMemberships  matrix of estimated probabilities for block memberships for all nodes
       probMemberships = function(value) {
