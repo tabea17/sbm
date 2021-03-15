@@ -124,3 +124,62 @@ rnsbmObs <- function(parametre, Z, modelFamily='Gauss', directed=FALSE){   # Z m
   return(list(dataMatrix=X, latentAdj=A))
 }
 
+
+
+graphInferenceFromqvalues <- function(qvalues, n, alpha=0.05){
+
+  A <- matrix(0, n, n)
+  A[lower.tri(A)] <- (qval_results<alpha)
+  A <- A + t(A)
+  return(A)
+}
+
+
+
+# vient de sample.R
+
+#' Sampling of Noisy SBMs
+#'
+#' This function samples a simple Stochastic Block Models, with various model
+#' for the distribution of the edges:  Bernoulli, Poisson, or Gaussian models, and possibly with covariates
+#'
+#' @param nbNodes number of nodes in the network
+#' @param blockProp parameters for block proportions
+#' @param connectParam list of parameters for connectivity with a matrix of means 'mean' and an optional matrix of variances 'var', the sizes of which must match \code{blockProp} length
+#' @param model character describing the model for the relation between nodes (\code{'bernoulli'}, \code{'poisson'}, \code{'gaussian'}, ...). Default is \code{'bernoulli'}.
+#' @param directed logical, directed network or not. Default is \code{FALSE}.
+#' @param dimLabels an optional list of labels for each dimension (in row, in column)
+#' @param covariates a list of matrices with same dimension as mat describing covariates at the edge level. No covariate per Default.
+#' @param covariatesParam optional vector of covariates effect. A zero length numeric vector by default.
+#'
+#' @return  an object with class \code{\link{SimpleSBM}}
+#'
+#' @examples
+#' ### =======================================
+#' Noisy Gaussian model
+#' ## Graph parameters
+#' nbNodes  <- 10
+#' blockProp <- c(.5, .5)      # group proportions
+#' connectParam=list(mean=matrix(c(0.8,0.1,0.1,0.9), ncol=2, nrow=2))
+#' noiseParam=c(0,1)
+#' signalParam=matrix(c(10,10,10,.2,.2,.2), ncol=2)
+#' ## Graph Sampling
+#' mySampler <- sampleNoisySBM(model = 'Gauss', nbNodes, directed = FALSE, blockProp, connectParam, noiseParam, signalParam)
+#' plot(mySampler)
+#' plot(mySampler,type='meso')
+#' plot(mySampler,type='latentNetwork')
+#' hist(mySampler$networkData)
+#' @export
+sampleNoisySBM <- function(model = 'Gauss',
+                           nbNodes,
+                           directed = FALSE,
+                           blockProp,
+                           connectParam,
+                           noiseParam,
+                           signalParam
+                           ) {
+
+  mySampler <- NoisySBM$new(model, nbNodes, directed, blockProp, connectParam, noiseParam, signalParam)
+  mySampler$rNetwork(store = TRUE)
+  mySampler
+}

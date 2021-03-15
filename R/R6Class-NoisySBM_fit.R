@@ -1,6 +1,6 @@
-#' R6 Class definition of a Simple SBM fit
+#' R6 Class definition of a Noisy SBM fit
 #'
-#' This class is designed to give a representation and adjust an SBM fitted with blockmodels.
+#' This class is designed to give a representation and adjust an Noisy SBM fitted.
 #'
 #' @import R6 blockmodels
 #' @export
@@ -97,66 +97,36 @@ NoisySBM_fit <-
       #'  \item{"nbBlocksRange"}{minimal and maximal number or blocks explored}
       #'  \item{"fast"}{logical: should approximation be used for Bernoulli model with covariates. Default to \code{TRUE}}
       #' }
-      # optimize = function(estimOptions = list()){
-      #
-      #  if(private$model == 'ZIgaussian') stop("Inference not yet implemented for ZI gaussian network")
-      #
-      #   currentOptions <- list(
-      #     verbosity     = 1,
-      #     plot          = TRUE,
-      #     explorFactor  = 1.5,
-      #     nbBlocksRange = c(1,NULL),
-      #     nbCores       = 2,
-      #     fast          = TRUE
-      #   )
-      #   currentOptions[names(estimOptions)] <- estimOptions
-      #
-      #   currentOptions <- list(
-      #     verbosity     = 1,
-      #     plot          = TRUE,
-      #     explorFactor  = 1.5,
-      #     nbBlocksRange = c(1,NULL),
-      #     nbCores       = 2,
-      #     fast          = TRUE
-      #   )
-      #   currentOptions[names(estimOptions)] <- estimOptions
-      #
-      #   ## Transform estimOptions to a suited for blockmodels list of options
-      #   blockmodelsOptions <- list(
-      #     verbosity          = currentOptions$verbosity,
-      #     plotting           = if(currentOptions$plot) character(0) else "",
-      #     explore_min        = currentOptions$nbBlocksRange[1],
-      #     explore_max        = currentOptions$nbBlocksRange[2],
-      #     ncores             = currentOptions$nbCores,
-      #     exploration_factor = currentOptions$explorFactor
-      #    )
-      #   fast <- currentOptions$fast
-      #
-      #  ## generating arguments for blockmodels call
-      #  args <- list(membership_type =  ifelse(!private$directed_, "SBM_sym", "SBM"), adj = .na2zero(private$Y))
-      #  if (self$nbCovariates > 0) args$covariates <- private$X
-      #  args <- c(args, blockmodelsOptions)
-      #
-      #  ## model construction
-      #  model_type <- ifelse(self$nbCovariates > 0, paste0(private$model,"_covariates"), private$model)
-      #  if (model_type == 'bernoulli_covariates' & fast == TRUE) model_type <- 'bernoulli_covariates_fast'
-      #  private$BMobject <- do.call(paste0("BM_", model_type), args)
-      #
-      #  ## performing estimation
-      #  private$BMobject$estimate()
-      #
-      #  ## Exporting blockmodels output to simpleSBM_fit fields
-      #  private$import_from_BM()
-      #
-      #     invisible(private$BMobject)
-      # },
-      #
+      optimize = function(estimOptions = list()){
 
-       optimize = function(sbmSize=list(Qmin=1, Qmax=NULL, explor=1.5), filename=NULL){    # A CHANGER pour laisser la main à l'utilisateur list(Qmin=1, Qmax=NULL, explor=1.5)
-       private$noisySBMobject <- fitNSBM(private$dataMatrix, private$submodel, sbmSize, filename)
+        currentOptions <- list(
+           explorFactor  = 1.5,
+           nbBlocksRange = c(1,NULL),
+           nbCores       = 2,
+           filename = NULL
+              )
+         currentOptions[names(estimOptions)] <- estimOptions
 
-       private$import_from_noisySBM()   #### FANNY :  à rajouter ? cf gremlins . Mettre des variables en active ? nu0... ?
-      },
+         sbmSize = list(Qmin= currentOptions$nbBlocksRange[1],
+                        Qmax= if(is.na(currentOptions$nbBlocksRange[2])) NULL else currentOptions$nbBlocksRange[2],
+                        explor= currentOptions$explorFactor)
+
+        private$noisySBMobject <- fitNSBM(private$dataMatrix, model=private$submodel, sbmSize=sbmSize, filename = currentOptions$filename, nbCores= currentOptions$nbCores)
+
+        private$import_from_noisySBM()   #### FANNY : ok choisit le bon Q
+        private$qvalues = NULL
+       },
+
+      graphInference = function(testLevel =0.05){
+        private$testLevel=testLevel
+        if (is.null(private$qvalues))  { print("qval non presente")
+             ProcTest = noisySBM::graphInference(private$dataMatrix,nodeClustering = self$memberships, theta= private$parameters, alpha=testLevel, private$modelFamily)
+             print(ProcTest$qvalues[1:10] )  # a rajouter en sortie en variable active ?
+               private$Y = ProcTest$A
+        }
+        else {private$Y = graphInferenceFromqvalues(private$qvalues, self$nbNodes, private$testLevel)}
+
+        },
 
       #' @description method to select a specific model among the ones fitted during the optimization.
       #'  Fields of the current SBM_fit will be updated accordingly.

@@ -10,7 +10,9 @@ NoisySBM <-
     private=list(
       modelFamily=NULL,
       parameters = NULL,
-      dataMatrix = NULL
+      dataMatrix = NULL,
+      qvalues=NULL,
+      testLevel =NULL
     ),
 
     public = list(
@@ -184,6 +186,13 @@ NoisySBM <-
           private$Z <- value
         }
       },
+     qvalues_   = function(value) {
+       if (missing(value))
+         return(private$qvalues)
+       else { private$qvalues <- value }
+     },
+
+
      ### field with access only
       #' @field nbBlocks number of blocks
       nbBlocks    = function(value) {length(private$pi)},
@@ -196,7 +205,9 @@ NoisySBM <-
       #' @field indMemberships matrix for clustering memberships
       indMemberships = function(value) {as_indicator(as_clustering(private$Z))},
      networkObs = function(value) {return(private$dataMatrix)},   ##FANNY : j'ai rajoute
-      param = function(value) {private$parameters}
+  #   qvalues = function(value) {return(private$qvalues)},
+     testLevel_  = function(value) {return(private$testLevel)}
+   #   param = function(value) {private$parameters}
     )
   )
 
