@@ -10,10 +10,8 @@ NoisySBM <-
     private=list(
       modelFamily=NULL,
       parameters = NULL,
-      dataMatrix = NULL,
-      qvalues=NULL,
-      testLevel =NULL
-    ),
+      dataMatrix = NULL #,
+     ),
 
     public = list(
       #' @description constructor for noisySBM
@@ -30,20 +28,11 @@ NoisySBM <-
       initialize = function(modelFamily, nbNodes, directed=FALSE, blockProp, connectParam, noiseParam, signalParam, dimLabels=c("nodeName"), covarParam=numeric(length(covarList)), covarList=list()) {
 
         ## SANITY CHECKS (on parameters)
-     #  stopifnot(length(dimLabels) == 1)
-     #  stopifnot(is.atomic(blockProp), all(blockProp > 0), all(blockProp < 1)) # positive proportions
-     #  stopifnot(all.equal(length(blockProp), ncol(connectParam$mean)),        # dimensions match between vector of
-     #  all.equal(length(blockProp), nrow(connectParam$mean)))        # block proportion and connectParam$mean
-
-        ## Check that connectivity parameters and model are consistent
-     #  switch(model,
-     #    "bernoulli"  = stopifnot(all(connectParam$mean >= 0), all(connectParam$mean <= 1)),
-     #    "poisson"    = stopifnot(all(connectParam$mean >= 0)),
-     #    "gaussian"   = stopifnot(length(connectParam$var) == 1, connectParam$var > 0),
-     #    "ZIgaussian" = stopifnot(all(connectParam$p0 >= 0), all(connectParam$p0 <= 1))
-     #         )
-
-     # if (!directed) stopifnot(isSymmetric(connectParam$mean)) # connectivity and direction must agree
+       stopifnot(length(dimLabels) == 1)
+       stopifnot(is.atomic(blockProp), all(blockProp > 0), all(blockProp < 1)) # positive proportions
+       stopifnot(all.equal(length(blockProp), ncol(connectParam$mean)),        # dimensions match between vector of
+       all.equal(length(blockProp), nrow(connectParam$mean)))        # block proportion and connectParam$mean
+       # if (!directed) stopifnot(isSymmetric(connectParam$mean)) # connectivity and direction must agree
 
         private$modelFamily  = modelFamily
         private$parameters = list(pi = blockProp, w=connectParam$mean, nu0=noiseParam, nu=signalParam)
@@ -73,7 +62,7 @@ NoisySBM <-
      #'  #' @param covarList a list of covariates. By default, we use the covariates with which the model was estimated
      #'  #' @param theta_p0 a threshold...
      #'  #' @return a matrix of expected values for each dyad
-      predict = function() {                          # donne grande matrice des w_ql
+      predict = function(covarList = NULL, theta_p0 = NULL){          # donne grande matrice des w_ql. On a laisse covarList et theta_p0 pour que ca fonctionne avec predict.SBM mais aucun sens pour nous.
         mu <- private$Z %*% private$parameters$w %*% t(private$Z)
         mu
       },
@@ -150,34 +139,26 @@ NoisySBM <-
       #' @field connectParam parameters associated to the connectivity of the SBM, e.g. matrix of inter/inter block probabilities when model is Bernoulli
       connectParam   = function(value) {
         if (missing(value))
-          #return(private$parameters$w)
         return(list(mean=private$parameters$w))
         else {
-          # stopifnot(is.list(value))
-          # ## Check that connectivity parameters and model are consistent
-          # switch(private$model,
-          #   "bernoulli"  = stopifnot(all(value$mean >= 0), all(value$mean <= 1)),
-          #   "poisson"    = stopifnot(all(value$mean >= 0)),
-          #   "gaussian"   = stopifnot(length(value$var) == 1, value$var > 0),
-          #   "ZIgaussian" = stopifnot(all(value$p0 >= 0), all(value$p0 <= 1))
-          # )
-          # if (!self$directed) stopifnot(isSymmetric(value$mean)) # connectivity and direction must agree
+           stopifnot(is.list(value))
+           # if (!self$directed) stopifnot(isSymmetric(value$mean)) # connectivity and direction must agree
           private$parameters$w <- value
         }
       },
-
-
+      #' @field signalParam parameters
       signalParam   = function(value) {
         if (missing(value))
           return(private$parameters$nu)
         else { private$parameters$nu <- value }
       },
+      #' @field noiseParam parameters
       noiseParam   = function(value) {
         if (missing(value))
           return(private$parameters$nu0)
         else { private$parameters$nu0 <- value }
       },
-     #' @field probMemberships  matrix of estimated probabilities for block memberships for all nodes
+      #' @field probMemberships  matrix of estimated probabilities for block memberships for all nodes
       probMemberships = function(value) {
         if (missing(value))
           return(private$Z)
@@ -186,11 +167,6 @@ NoisySBM <-
           private$Z <- value
         }
       },
-     qvalues_   = function(value) {
-       if (missing(value))
-         return(private$qvalues)
-       else { private$qvalues <- value }
-     },
 
 
      ### field with access only
@@ -204,10 +180,7 @@ NoisySBM <-
       memberships = function(value) {if (!is.null(private$Z)) as_clustering(private$Z)},
       #' @field indMemberships matrix for clustering memberships
       indMemberships = function(value) {as_indicator(as_clustering(private$Z))},
-     networkObs = function(value) {return(private$dataMatrix)},   ##FANNY : j'ai rajoute
-  #   qvalues = function(value) {return(private$qvalues)},
-     testLevel_  = function(value) {return(private$testLevel)}
-   #   param = function(value) {private$parameters}
+      networkObs = function(value) {return(private$dataMatrix)} #,   ##FANNY : j'ai rajoute
     )
   )
 

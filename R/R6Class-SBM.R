@@ -234,7 +234,7 @@ predict.SBM <- function(object, covarList = object$covarList, theta_p0 = 0, ...)
 #'  }
 #' @return a ggplot2 object for the \code{'data'} and \code{'expected'}, a list with the igraph object \code{g} and the \code{layout} for the \code{'meso'}
 #' @export
-plot.SBM = function(x, type = c('data', 'expected', 'meso'), ordered = TRUE, plotOptions = list(), ...){
+plot.SBM = function(x, type = c('data', 'expected', 'meso','latentNetwork'), ordered = TRUE, plotOptions = list(), ...){
 
   stopifnot(is_SBM(x))
   type <- match.arg(type)
@@ -259,7 +259,8 @@ fitted.SBM <- function(object,  ...) {
   stopifnot(is_SBM(object))
   stopifnot(inherits(object, "SimpleSBM") |
             inherits(object, "BipartiteSBM") |
-            inherits(object, "MultipartiteSBM")
+            inherits(object, "MultipartiteSBM") |
+            inherits(object, "NoisySBM")
       )
   object$predict()
 }

@@ -9,6 +9,8 @@ NoisySBM_fit <-
     classname = "NoisySBM_fit",
     inherit = NoisySBM,
     private = list(
+      qvalues_=NULL,
+      testLevel_ =NULL,
       submodel=NULL,
       J              = NULL, # approximation of the log-likelihood
       vICL           = NULL, # approximation of the ICL
@@ -19,26 +21,9 @@ NoisySBM_fit <-
          private$vICL  <- fit$sbmParam$ICL
          private$parameters    <- fit$theta   ### verif
          private$parameters$w <- wVectToMat(fit$theta$w, Q)
-        ### FANNY : on avait ça
-        ###private$w <- parameters$w  ### FANNY : ils appellent ça : private$theta$mean. C'est sous le format matrice Q*Q
-        ### FANNY Je mettrai : MAIS pb de dim dans reorder. Semble plutot venir de private$pi
-     #   private$theta$mean <- wVectToMat(parameters$w, Q)
-    #    private$nu0 <- parameters$nu0
-     #   private$nu <- parameters$nu
-        # private$beta  <- parameters$beta ## NULL if no covariates
-        # private$theta <- switch(private$BMobject$model_name,
-        #   "bernoulli"                 = list(mean = parameters$pi),
-        #   "bernoulli_covariates"      = list(mean = .logistic(parameters$m)),
-        #   "bernoulli_covariates_fast" = list(mean = .logistic(parameters$m)),
-        #   "poisson"                   = list(mean = parameters$lambda),
-        #   "poisson_covariates"        = list(mean = parameters$lambda),
-        #   "gaussian"                  = list(mean = parameters$mu, var = parameters$sigma2),
-        #   "gaussian_covariates"       = list(mean = parameters$mu, var = parameters$sigma2),
-        #   "ZIgaussian"                = list(mean = parameters$mu, var = parameters$sigma2, p0 = parameters$p0),
-        # )
-        private$Z  <- t(fit$sbmParam$clusterProba)
-        private$pi <- fit$theta$pi #parameters$pi
-       # private$edgeProba <- fit$sbmParam$edgeProba  #N_Q x N matrix
+         private$Z  <- t(fit$sbmParam$clusterProba)
+         private$pi <- fit$theta$pi #parameters$pi
+        # private$edgeProba <- fit$sbmParam$edgeProba  #N_Q x N matrix
       }
     ),
     public = list(
@@ -55,18 +40,6 @@ NoisySBM_fit <-
         stopifnot(isSymmetric(dataMatrix))    # symmetry and direction must agree
 
         ## INITIALIZE THE SBM OBJECT ACCORDING TO THE DATA
-      #  connectParam <- list(mean=NA)
-      #  signalParam <- NA
-      #  noiseParam <- NA
-      #  dimLabels= c(node="nodeName")
-
-        # connectParam <- switch(model,
-        #   "bernoulli"  = list(mean = matrix(0, 0, 0)),
-        #   "poisson"    = list(mean = matrix(0, 0, 0)),
-        #   "gaussian"   = list(mean = matrix(0, 0, 0), var = 1),
-        #   "ZIgaussian" = list(mean = matrix(0, 0, 0), var = 1, p0 = 0),
-        # )
-
        if (submodel %in% c('Gauss','Gauss0','Gauss01','GaussEqVar','Gauss0EqVar','Gauss0Var1','Gauss2distr','GaussAffil'))
             modelFamily <- 'Gauss'
        if (submodel %in% c('Exp','ExpGamma','Gamma'))
@@ -113,19 +86,17 @@ NoisySBM_fit <-
 
         private$noisySBMobject <- fitNSBM(private$dataMatrix, model=private$submodel, sbmSize=sbmSize, filename = currentOptions$filename, nbCores= currentOptions$nbCores)
 
-        private$import_from_noisySBM()   #### FANNY : ok choisit le bon Q
-        private$qvalues = NULL
+        private$import_from_noisySBM()   #### ok choisit le bon Q
        },
 
-      graphInference = function(testLevel =0.05){
-        private$testLevel=testLevel
-        if (is.null(private$qvalues))  { print("qval non presente")
+      graphInference = function(testLevel =0.05, qvalues=NULL){
+        private$testLevel_=testLevel
+         if (is.null(private$qvalues_)){
              ProcTest = noisySBM::graphInference(private$dataMatrix,nodeClustering = self$memberships, theta= private$parameters, alpha=testLevel, private$modelFamily)
-             print(ProcTest$qvalues[1:10] )  # a rajouter en sortie en variable active ?
-               private$Y = ProcTest$A
+              private$qvalues_=ProcTest$qvalues
+              private$Y = ProcTest$A
         }
-        else {private$Y = graphInferenceFromqvalues(private$qvalues, self$nbNodes, private$testLevel)}
-
+        else {private$Y = graphInferenceFromqvalues(private$qvalues_, self$nbNodes, private$testLevel_)}
         },
 
       #' @description method to select a specific model among the ones fitted during the optimization.
@@ -157,6 +128,15 @@ NoisySBM_fit <-
     ),
 
    active = list(
+     #' @field qvalues
+      qvalues   = function(value) {  return(private$qvalues_)},   # A VERIF
+      #     return(private$qvalues_)
+      # else { private$qvalues_ <- value }
+      # },
+
+     #' @field testLevel
+     testLevel = function(value) {return(private$testLevel_)},    # A VERIF
+
       #' @field loglik double: approximation of the log-likelihood (variational lower bound) reached
       loglik = function(value) {private$J},
       #' @field ICL double: value of the integrated classification log-likelihood
@@ -164,10 +144,8 @@ NoisySBM_fit <-
 
       #' @field penalty double, value of the penalty term in ICL
       ### FANNY : Revoir : pourquoi nbConnectParam en self ????
-         penalty  = function(value) {unname((self$nbConnectParam + self$nbCovariates) * log(self$nbDyads) + (self$nbBlocks-1) * log(self$nbNodes))},
-
-      ### FANNY :ressort tjs 0 ?
-          #' @field entropy double, value of the entropy due to the clustering distribution
+      penalty  = function(value) {unname((self$nbConnectParam + self$nbCovariates) * log(self$nbDyads) + (self$nbBlocks-1) * log(self$nbNodes))},
+      #' @field entropy double, value of the entropy due to the clustering distribution
       entropy  = function(value) {-sum(.xlogx(private$Z))},
 
       #' @field storedModels data.frame of all models fitted (and stored) during the optimization
